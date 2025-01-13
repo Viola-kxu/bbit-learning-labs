@@ -26,6 +26,7 @@ def main(sector: str, queueName: str) -> None:
     bindingKey = f"{sector}.#"
     
     consumer = mqConsumer(binding_key=bindingKey,exchange_name="Tech Lab Topic Exchange",queue_name=queueName)    
+       
     consumer.startConsuming()
     
 
@@ -36,7 +37,10 @@ if __name__ == "__main__":
     #
     #                       WRITE CODE HERE!!!
     #
+    parser = argparse.ArgumentParser()
+    parser.add_argument("sector")
+    parser.add_argument("queue_name")
     
-    
+    args = parser.parse_args()
 
-    sys.exit(main(sector,queue))
+    sys.exit(main(args.sector,args.queue))

@@ -68,5 +68,7 @@ class mqConsumer(mqConsumerInterface):
         
         # Close Channel
         # Close Connection
-        self.channel.close()
-        self.connection.close()
+        if self.channel is not None:
+            self.channel.close()
+        if self.connection is not None:
+            self.connection.close()
