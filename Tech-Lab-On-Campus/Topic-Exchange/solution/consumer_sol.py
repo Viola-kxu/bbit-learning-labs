@@ -1,49 +1,130 @@
+# import pika
+# import os
+
+# class mqConsumer:
+#     def __init__(self, binding_key: str, exchange_name: str, queue_name: str) -> None:
+#         self.binding_key = binding_key
+#         self.exchange_name = exchange_name
+#         self.queue_name = queue_name
+#         self.setupRMQConnection()
+
+#     def setupRMQConnection(self) -> None:
+#         # Set-up Connection to RabbitMQ service
+#         con_params = pika.URLParameters(os.environ["AMQP_URL"])
+#         self.connection = pika.BlockingConnection(parameters=con_params)
+        
+#         # Establish Channel
+#         self.channel = self.connection.channel()
+        
+#         # Create the topic exchange
+#         self.channel.exchange_declare(
+#             exchange=self.exchange_name,
+#             exchange_type="topic"
+#         )
+        
+#         # Create queue
+#         self.channel.queue_declare(queue=self.queue_name)
+        
+#         # Bind queue to exchange with binding key
+#         self.channel.queue_bind(
+#             queue=self.queue_name,
+#             exchange=self.exchange_name,
+#             routing_key=self.binding_key
+#         )
+        
+#         # Setup callback
+#         self.channel.basic_consume(
+#             queue=self.queue_name,
+#             on_message_callback=self.on_message_callback,
+#             auto_ack=False
+#         )
+
+#     def on_message_callback(self, channel, method_frame, header_frame, body):
+        
+#         print(f" [x] Received {body}")
+#         channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+
+#     def startConsuming(self) -> None:
+#         print(" [*] Waiting for messages. To exit press CTRL+C")
+#         self.channel.start_consuming()
+
 import pika
 import os
+from consumer_interface import mqConsumerInterface
 
-class mqConsumer:
-    def __init__(self, binding_key: str, exchange_name: str, queue_name: str) -> None:
+class mqConsumer(mqConsumerInterface):
+    def __init__(
+        self, binding_key: str, exchange_name: str, queue_name: str
+    ) -> None:
+        # Save parameters to class variables
         self.binding_key = binding_key
         self.exchange_name = exchange_name
         self.queue_name = queue_name
+        
+        self.connection = None
+        self.channel = None
+        self.exchange = None
+
+        # Call setupRMQConnection
         self.setupRMQConnection()
 
     def setupRMQConnection(self) -> None:
         # Set-up Connection to RabbitMQ service
-        con_params = pika.URLParameters(os.environ["AMQP_URL"])
-        self.connection = pika.BlockingConnection(parameters=con_params)
+        conParams = pika.URLParameters(os.environ['AMQP_URL'])
+        connection = pika.BlockingConnection(parameters=conParams)
+        self.connection = connection
         
         # Establish Channel
         self.channel = self.connection.channel()
-        
-        # Create the topic exchange
-        self.channel.exchange_declare(
-            exchange=self.exchange_name,
-            exchange_type="topic"
-        )
-        
-        # Create queue
+
+        # Create Queue if not already present
         self.channel.queue_declare(queue=self.queue_name)
-        
-        # Bind queue to exchange with binding key
-        self.channel.queue_bind(
-            queue=self.queue_name,
+
+        # Create the exchange if not already present
+        # self.exchange = self.channel.exchange_declare(exchange=self.exchange_name)
+        self.exchange = self.channel.exchange_declare(
             exchange=self.exchange_name,
-            routing_key=self.binding_key
-        )
-        
-        # Setup callback
-        self.channel.basic_consume(
-            queue=self.queue_name,
-            on_message_callback=self.on_message_callback,
-            auto_ack=False
+            exchange_type='topic',
+            durable=False,
         )
 
-    def on_message_callback(self, channel, method_frame, header_frame, body):
-        message = body.decode()
-        print(f" [x] Received {message}")
-        channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+        # Bind Binding Key to Queue on the exchange
+        self.channel.queue_bind(
+            queue= self.queue_name,
+            routing_key= self.exchange_name,
+            exchange= self.exchange_name,
+        )        
+
+        # Set-up Callback function for receiving messages
+        self.channel.basic_consume(
+            self.queue_name, self.on_message_callback, auto_ack=False
+        )
+
+    def on_message_callback(
+        self, channel, method_frame, header_frame, body
+    ) -> None:
+        # Acknowledge message
+        self.channel.basic_ack(method_frame.delivery_tag, False)
+        
+        #Print message (The message is contained in the body parameter variable)
+        
+        print(f"Received message: {body.decode('utf-8')}")
 
     def startConsuming(self) -> None:
+        # Print " [*] Waiting for messages. To exit press CTRL+C"
         print(" [*] Waiting for messages. To exit press CTRL+C")
+        print(f"binding key is {self.binding_key}")
+
+        # Start consuming messages
         self.channel.start_consuming()
+    
+    def __del__(self) -> None:
+        # Print "Closing RMQ connection on destruction"
+        print("Closing RMQ connection on destruction")
+        
+        # Close Channel
+        # Close Connection
+        if self.channel is not None:
+            self.channel.close()
+        if self.connection is not None:
+            self.connection.close()

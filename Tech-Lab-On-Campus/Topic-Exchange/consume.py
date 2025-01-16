@@ -43,4 +43,4 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    sys.exit(main(args.sector,args.queue))
+    sys.exit(main(args.sector,args.queue_name))

@@ -12,42 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
 import sys
+from solution.producer_sol import mqProducer
 
-from solution.producer_sol import mqProducer  # pylint: disable=import-error
+def main():
+    # Check if we have the right number of command line arguments
+    if len(sys.argv) != 4:
+        print("Usage: python publish.py <ticker> <price> <sector>")
+        sys.exit(1)
 
+    # Get values from command line
+    ticker = sys.argv[1]
+    price = sys.argv[2]
+    sector = sys.argv[3]
 
-def main(ticker: str, price: float, sector: str) -> None:
+    # Create routing key in format "stock.sector.ticker"
+    routing_key = f"{sector}.{ticker}"
     
-    # Implement Logic to Create Routing Key from the ticker and sector variable -  Step 2
-    #
-    #                       WRITE CODE HERE!!!
-    #
-    routingKey = f"{sector}.{ticker}"
-
-    producer = mqProducer(routing_key=routingKey,exchange_name="Tech Lab Topic Exchange")
-
-
-    # Implement Logic To Create a message variable from the variable EG. "TSLA price is now $500" - Step 3
-    #
-    #                       WRITE CODE HERE!!!
-    #
-    message = f"{ticker} price is now ${price}"
+    # Create producer with topic exchange
+    producer = mqProducer(
+        routing_key=routing_key,
+        exchange_name="stock_topic_exchange"  # New exchange name
+    )
     
+    # Create and send message
+    message = f"{ticker} is ${price}"
     producer.publishOrder(message)
 
 if __name__ == "__main__":
-
-    # Implement Logic to read the ticker, price and sector string from the command line and save them - Step 1
-    #
-    #                       WRITE CODE HERE!!!
-    #
-    parser = argparse.ArgumentParser()
-    parser.add_argument("ticker")
-    parser.add_argument("price", type=float)
-    parser.add_argument("sector")
-    
-    args = parser.parse_args()
-    
-    sys.exit(main(args.ticker, args.price, args.sector))
+    main()

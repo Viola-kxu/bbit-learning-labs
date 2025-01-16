@@ -17,20 +17,17 @@ class mqProducer:
         
         # Create the topic exchange
         self.channel.exchange_declare(
-            exchange=self.exchange_name,
-            exchange_type="topic"
+            exchange=self.exchange_name, 
+            exchange_type="topic",
+            durable=True,
         )
 
+
+
     def publishOrder(self, message: str) -> None:
-        # Send message using routing key
         self.channel.basic_publish(
             exchange=self.exchange_name,
             routing_key=self.routing_key,
             body=message
         )
-        
         print(f"Sent {message} with routing key {self.routing_key}")
-        
-        # Close connections
-        self.channel.close()
-        self.connection.close()
